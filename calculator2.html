@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاسبة الرهان - مبادئ المالية</title>
+    <!-- تحميل المكتبات الأساسية -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة الأيقونات -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* تحسينات إضافية للمظهر */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#1e1b4b',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // مكون الأيقونات المخصص لتجنب مشاكل استيراد المكتبات الخارجية
+        const Icon = ({ name, size = 20, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+        };
+
+        const App = () => {
+            const [darkMode, setDarkMode] = useState(false);
+            const [midtermPercent, setMidtermPercent] = useState(70); 
+            const [otherGrades, setOtherGrades] = useState(22); 
+            const [selectedTarget, setSelectedTarget] = useState(90);
+
+            const TOTAL_MIDTERM_POINTS = 25;
+            const TOTAL_FINAL_POINTS = 50;
+            const TOTAL_FINAL_QUESTIONS = 20;
+
+            const targetOptions = [90, 85, 80, 75, 70, 65, 60, 55, 50];
+            const finalScenarios = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+
+            // التحكم في وضع الدارك مود
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }, [darkMode]);
+
+            const getGradeInfo = (score) => {
+                const finalScore = Math.ceil(Math.round(score * 2) / 2);
+                if (finalScore >= 95) return { label: 'A+', color: 'bg-emerald-600' };
+                if (finalScore >= 90) return { label: 'A', color: 'bg-emerald-500' };
+                if (finalScore >= 85) return { label: 'B+', color: 'bg-blue-600' };
+                if (finalScore >= 80) return { label: 'B', color: 'bg-blue-500' };
+                if (finalScore >= 75) return { label: 'C+', color: 'bg-orange-500' };
+                if (finalScore >= 70) return { label: 'C', color: 'bg-orange-400' };
+                if (finalScore >= 65) return { label: 'D+', color: 'bg-rose-500' };
+                if (finalScore >= 60) return { label: 'D', color: 'bg-rose-400' };
+                return { label: 'F', color: 'bg-slate-500' };
+            };
+
+            const calculateTotal = (actualFinalPercent) => {
+                const isTargetMet = actualFinalPercent >= selectedTarget;
+                const currentMidtermPoints = (midtermPercent / 100) * TOTAL_MIDTERM_POINTS;
+                const effectiveMidtermPoints = isTargetMet 
+                    ? (selectedTarget / 100) * TOTAL_MIDTERM_POINTS 
+                    : currentMidtermPoints;
+                const finalExamPoints = (actualFinalPercent / 100) * TOTAL_FINAL_POINTS;
+                return effectiveMidtermPoints + finalExamPoints + otherGrades;
+            };
+
+            const questionsNeeded = Math.ceil((selectedTarget / 100) * TOTAL_FINAL_QUESTIONS);
+
+            return (
+                <div className="max-w-6xl mx-auto py-6 px-4 md:py-10">
+                    {/* رأس الصفحة */}
+                    <header className="bg-white dark:bg-slate-900 rounded-3xl p-6 mb-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg">
+                                <Icon name="calculator" size={28} />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-800 dark:text-white">حاسبة الرهان</h1>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm">مبادرة "اختر نسبتك" - مبادئ المالية</p>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => setDarkMode(!darkMode)} 
+                                className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-transparent dark:border-slate-700"
+                            >
+                                {darkMode ? <Icon name="sun" className="text-yellow-400" /> : <Icon name="moon" className="text-indigo-600" />}
+                            </button>
+                            <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-2 rounded-full border border-amber-100 dark:border-amber-900/30 text-[10px] font-black text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                                <Icon name="timer" size={14} />
+                                الموعد: السبت 16 مايو
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* لوحة التحكم */}
+                        <div className="lg:col-span-4 space-y-6">
+                            <section className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                                <h2 className="text-lg font-bold mb-6 flex items-center gap-2 border-b pb-4 dark:border-slate-800">
+                                    <Icon name="user" className="text-indigo-600" /> مدخلاتك الشخصية
+                                </h2>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">نسبة الميدترم الحالية (%)</label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number" 
+                                                value={midtermPercent} 
+                                                onChange={(e) => setMidtermPercent(Math.min(100, Math.max(0, e.target.value)))} 
+                                                className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-4 font-bold text-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" 
+                                            />
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">أعمال السنة والواجبات (من 25)</label>
+                                        <input 
+                                            type="number" 
+                                            value={otherGrades} 
+                                            onChange={(e) => setOtherGrades(Math.min(25, Math.max(0, e.target.value)))} 
+                                            className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-4 font-bold text-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" 
+                                        />
+                                    </div>
+                                    <div className="pt-4 border-t dark:border-slate-800">
+                                        <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">حدد رهانك المختار (Target):</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {targetOptions.map(t => (
+                                                <button 
+                                                    key={t} 
+                                                    onClick={() => setSelectedTarget(t)} 
+                                                    className={`py-3 rounded-xl text-sm font-bold transition-all ${selectedTarget === t ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                                                >
+                                                    {t}%
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div className="bg-indigo-900 rounded-[2rem] p-7 text-white shadow-xl space-y-6 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-2xl"></div>
+                                <div className="flex justify-between items-end relative z-10">
+                                    <div>
+                                        <p className="text-xs opacity-60 mb-1">الميدترم سيصبح</p>
+                                        <p className="text-4xl font-black">{(selectedTarget / 100) * TOTAL_MIDTERM_POINTS} <span className="text-xs font-normal opacity-40 text-white/50">من 25</span></p>
+                                    </div>
+                                    <div className="text-left bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                        <p className="text-[10px] opacity-60 mb-1">الزيادة الصافية</p>
+                                        <p className="text-xl font-bold text-emerald-400">+{((selectedTarget / 100) * TOTAL_MIDTERM_POINTS - (midtermPercent / 100) * TOTAL_MIDTERM_POINTS).toFixed(2)}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-4 border-t border-white/10 flex items-center gap-4 relative z-10">
+                                    <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center text-indigo-300 shadow-inner">
+                                        <Icon name="book-open" size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] opacity-60 text-right">تحتاج تحل صح في الفاينل</p>
+                                        <p className="text-sm font-bold text-right">{questionsNeeded} سؤال من أصل 20</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* جدول النتائج */}
+                        <div className="lg:col-span-8 space-y-6">
+                            <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                    <h3 className="font-bold flex items-center gap-2 dark:text-white">
+                                        <Icon name="trending-up" className="text-indigo-600" /> تحليل سيناريوهات النهائي
+                                    </h3>
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold bg-white dark:bg-slate-800 px-3 py-1 rounded-full border dark:border-slate-700">جبر الـ 0.5 مفعّل</span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-right">
+                                        <thead className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest border-b dark:border-slate-800">
+                                            <tr>
+                                                <th className="p-5">أداء الفاينل</th>
+                                                <th className="p-5 text-center">المجموع</th>
+                                                <th className="p-5 text-center">القريد</th>
+                                                <th className="p-5 text-center">الميدترم</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y dark:divide-slate-800">
+                                            {finalScenarios.map(actual => {
+                                                const total = calculateTotal(actual);
+                                                const grade = getGradeInfo(total);
+                                                const isMet = actual >= selectedTarget;
+                                                return (
+                                                    <tr key={actual} className={`transition-all ${isMet ? 'bg-emerald-50/30 dark:bg-emerald-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                                                        <td className="p-5">
+                                                            <div className="font-black text-lg dark:text-white">{actual}%</div>
+                                                            <div className="text-[10px] text-slate-400">{(actual/100)*TOTAL_FINAL_POINTS} درجة</div>
+                                                        </td>
+                                                        <td className="p-5 text-center font-black text-2xl dark:text-white">{total.toFixed(1)}</td>
+                                                        <td className="p-5 text-center">
+                                                            <div className={`${grade.color} text-white px-6 py-1.5 rounded-full font-black text-sm shadow-sm`}>{grade.label}</div>
+                                                        </td>
+                                                        <td className="p-5 text-center">
+                                                            {isMet ? (
+                                                                <span className="text-emerald-500 text-[10px] font-black flex items-center justify-center gap-1">
+                                                                    <Icon name="check-circle-2" size={12}/> تعدل
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-slate-400 dark:text-slate-600 text-[10px] font-bold">الأصلية</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 shadow-sm">
+                                <div className="h-12 w-12 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 shadow-inner">
+                                    <Icon name="award" size={24} />
+                                </div>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    <strong>ملحوظة هامة:</strong> رهان الـ 90% يمنحك أعلى قفزة ممكنة لدرجة الميدترم. في حال لم تحقق الرهان، ستعود لدرجتك الأصلية دون أي خصم؛ المبادرة تدعمك ولا تضرك أبداً.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <footer className="mt-12 text-center text-slate-400 dark:text-slate-600 text-[10px] font-black uppercase tracking-widest border-t dark:border-slate-800 pt-8">
+                        حاسبة الرهان © 2026 | أداة مخصصة لطلاب المالية
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
