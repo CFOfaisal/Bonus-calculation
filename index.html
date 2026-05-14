@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حاسبة الرهان - مبادئ المالية</title>
-    <!-- تحميل المكتبات الأساسية -->
+    <title>حاسبة مبادرة اختر نسبتك - مبادئ المالية</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- مكتبة الأيقونات -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -18,231 +16,360 @@
             font-family: 'Tajawal', sans-serif; 
             transition: background-color 0.3s ease, color 0.3s ease;
         }
-        /* تحسينات إضافية للمظهر */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .input-group {
+            @apply bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-indigo-500 flex-1;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .chart-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+        .glass {
+            @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm;
         }
     </style>
-    
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#4f46e5',
-                        secondary: '#1e1b4b',
-                    }
+                    colors: { primary: '#4f46e5', secondary: '#1e1b4b' }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-12 transition-all duration-500">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // مكون الأيقونات المخصص لتجنب مشاكل استيراد المكتبات الخارجية
         const Icon = ({ name, size = 20, className = "" }) => {
-            useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
-            }, [name]);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
             return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
         };
 
         const App = () => {
             const [darkMode, setDarkMode] = useState(false);
-            const [midtermPercent, setMidtermPercent] = useState(70); 
-            const [otherGrades, setOtherGrades] = useState(22); 
-            const [selectedTarget, setSelectedTarget] = useState(90);
-
-            const TOTAL_MIDTERM_POINTS = 25;
-            const TOTAL_FINAL_POINTS = 50;
-            const TOTAL_FINAL_QUESTIONS = 20;
-
+            
+            // الثوابت
+            const WEIGHTS = { midterm: 25, quiz: 7.5, other: 10, final: 50 };
             const targetOptions = [90, 85, 80, 75, 70, 65, 60, 55, 50];
             const finalScenarios = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+            const grades = [
+                { id: 'A+', min: 95 }, { id: 'A', min: 90 },
+                { id: 'B+', min: 85 }, { id: 'B', min: 80 },
+                { id: 'C+', min: 75 }, { id: 'C', min: 70 }
+            ];
 
-            // التحكم في وضع الدارك مود
+            // درجات الطالب
+            const [midterm, setMidterm] = useState({ percent: '', points: '' });
+            const [quiz1, setQuiz1] = useState({ percent: '', points: '' });
+            const [quiz2, setQuiz2] = useState({ percent: '', points: '' });
+            const [homeworkTotal, setHomeworkTotal] = useState(''); 
+            const [selectedTarget, setSelectedTarget] = useState(90);
+            const [savedScenario, setSavedScenario] = useState(null);
+
             useEffect(() => {
-                if (darkMode) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
+                darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark');
             }, [darkMode]);
 
-            const getGradeInfo = (score) => {
-                const finalScore = Math.ceil(Math.round(score * 2) / 2);
-                if (finalScore >= 95) return { label: 'A+', color: 'bg-emerald-600' };
-                if (finalScore >= 90) return { label: 'A', color: 'bg-emerald-500' };
-                if (finalScore >= 85) return { label: 'B+', color: 'bg-blue-600' };
-                if (finalScore >= 80) return { label: 'B', color: 'bg-blue-500' };
-                if (finalScore >= 75) return { label: 'C+', color: 'bg-orange-500' };
-                if (finalScore >= 70) return { label: 'C', color: 'bg-orange-400' };
-                if (finalScore >= 65) return { label: 'D+', color: 'bg-rose-500' };
-                if (finalScore >= 60) return { label: 'D', color: 'bg-rose-400' };
+            const handleReset = () => {
+                setMidterm({ percent: '', points: '' });
+                setQuiz1({ percent: '', points: '' });
+                setQuiz2({ percent: '', points: '' });
+                setHomeworkTotal('');
+                setSelectedTarget(90);
+                setSavedScenario(null);
+            };
+
+            const clamp = (val, max) => {
+                if (val === '') return '';
+                const num = parseFloat(val);
+                return num > max ? max : (num < 0 ? 0 : num);
+            };
+
+            const updateMidterm = (val, type) => {
+                if (type === 'p') {
+                    const cp = clamp(val, 100);
+                    setMidterm({ percent: cp, points: cp === '' ? '' : (cp / 100 * WEIGHTS.midterm).toFixed(2) });
+                } else {
+                    const cpt = clamp(val, WEIGHTS.midterm);
+                    setMidterm({ points: cpt, percent: cpt === '' ? '' : (cpt / WEIGHTS.midterm * 100).toFixed(0) });
+                }
+            };
+
+            const updateQuiz = (val, type, num) => {
+                const setter = num === 1 ? setQuiz1 : setQuiz2;
+                if (type === 'p') {
+                    const cp = clamp(val, 100);
+                    setter({ percent: cp, points: cp === '' ? '' : (cp / 100 * WEIGHTS.quiz).toFixed(2) });
+                } else {
+                    const cpt = clamp(val, WEIGHTS.quiz);
+                    setter({ points: cpt, percent: cpt === '' ? '' : (cpt / WEIGHTS.quiz * 100).toFixed(0) });
+                }
+            };
+
+            const getGradeLabel = (score) => {
+                const s = Math.ceil(Math.round(score * 2) / 2);
+                if (s >= 95) return { label: 'A+', color: 'bg-emerald-600' };
+                if (s >= 90) return { label: 'A', color: 'bg-emerald-500' };
+                if (s >= 85) return { label: 'B+', color: 'bg-blue-600' };
+                if (s >= 80) return { label: 'B', color: 'bg-blue-500' };
+                if (s >= 75) return { label: 'C+', color: 'bg-orange-500' };
+                if (s >= 70) return { label: 'C', color: 'bg-orange-400' };
+                if (s >= 65) return { label: 'D+', color: 'bg-rose-500' };
+                if (s >= 60) return { label: 'D', color: 'bg-rose-400' };
                 return { label: 'F', color: 'bg-slate-500' };
             };
 
-            const calculateTotal = (actualFinalPercent) => {
-                const isTargetMet = actualFinalPercent >= selectedTarget;
-                const currentMidtermPoints = (midtermPercent / 100) * TOTAL_MIDTERM_POINTS;
-                const effectiveMidtermPoints = isTargetMet 
-                    ? (selectedTarget / 100) * TOTAL_MIDTERM_POINTS 
-                    : currentMidtermPoints;
-                const finalExamPoints = (actualFinalPercent / 100) * TOTAL_FINAL_POINTS;
-                return effectiveMidtermPoints + finalExamPoints + otherGrades;
+            const currentTotalEarned = (parseFloat(midterm.points) || 0) + (parseFloat(quiz1.points) || 0) + (parseFloat(quiz2.points) || 0) + (parseFloat(homeworkTotal) || 0);
+            
+            const calculateScenario = (finalExamPercent, customMidtermPoints = null, customTarget = null) => {
+                const mPoints = customMidtermPoints || parseFloat(midterm.points) || 0;
+                const target = customTarget || selectedTarget;
+                const isMet = finalExamPercent >= target;
+                const effectiveMidterm = isMet ? (target / 100) * WEIGHTS.midterm : mPoints;
+                const finalPoints = (finalExamPercent / 100) * WEIGHTS.final;
+                const total = effectiveMidterm + (parseFloat(quiz1.points) || 0) + (parseFloat(quiz2.points) || 0) + (parseFloat(homeworkTotal) || 0) + finalPoints;
+                return { total: Number(total), isMet };
             };
 
-            const questionsNeeded = Math.ceil((selectedTarget / 100) * TOTAL_FINAL_QUESTIONS);
+            const calculateRequirement = (targetGradeScore) => {
+                const otherPoints = (parseFloat(quiz1.points) || 0) + (parseFloat(quiz2.points) || 0) + (parseFloat(homeworkTotal) || 0);
+                const mPoints = parseFloat(midterm.points) || 0;
+                const neededFinalIfMet = (targetGradeScore - ((selectedTarget/100)*WEIGHTS.midterm) - otherPoints) / WEIGHTS.final * 100;
+                const actualNeed = Math.max(neededFinalIfMet, selectedTarget);
+                if (actualNeed > 100) return "صعب حالياً";
+                return `${actualNeed.toFixed(1)}% (حل ${Math.ceil((actualNeed/100)*20)} صح)`;
+            };
+
+            const getRecommendation = (actualFinal) => {
+                if (actualFinal >= selectedTarget) return { text: 'الخيار الاستراتيجي', color: 'text-emerald-600 dark:text-emerald-400', icon: 'zap' };
+                return { text: 'فائدة محدودة', color: 'text-slate-400', icon: 'minus' };
+            };
+
+            const isIllogicalTarget = midterm.percent !== '' && parseFloat(selectedTarget) < parseFloat(midterm.percent);
 
             return (
-                <div className="max-w-6xl mx-auto py-6 px-4 md:py-10">
-                    {/* رأس الصفحة */}
-                    <header className="bg-white dark:bg-slate-900 rounded-3xl p-6 mb-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg">
-                                <Icon name="calculator" size={28} />
-                            </div>
+                <div className="max-w-6xl mx-auto py-8 px-4">
+                    {/* Header */}
+                    <header className="glass rounded-[2rem] p-6 mb-8 flex flex-col lg:flex-row justify-between items-center gap-6 border-indigo-100 dark:border-indigo-900/30 overflow-hidden relative shadow-md">
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg"><Icon name="graduation-cap" size={28} /></div>
                             <div>
-                                <h1 className="text-2xl font-black text-slate-800 dark:text-white">حاسبة الرهان</h1>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm">مبادرة "اختر نسبتك" - مبادئ المالية</p>
+                                <h1 className="text-2xl font-black text-slate-800 dark:text-white">حاسبة مبادرة "اختر نسبتك"</h1>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm">قسم المالية - كلية إدارة الأعمال</p>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                            <button 
-                                onClick={() => setDarkMode(!darkMode)} 
-                                className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-transparent dark:border-slate-700"
-                            >
+
+                        {/* Deadline Alert */}
+                        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl relative z-10">
+                            <Icon name="calendar" size={16} className="text-amber-600 dark:text-amber-400" />
+                            <div className="text-xs">
+                                <span className="font-bold text-amber-800 dark:text-amber-200">الموعد النهائي للتسجيل:</span>
+                                <span className="mr-1 text-amber-700 dark:text-amber-400">السبت 16 مايو 2026</span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 relative z-10">
+                            <button onClick={handleReset} className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 flex items-center gap-2 text-xs font-bold">
+                                <Icon name="rotate-ccw" size={16} /> تصفير
+                            </button>
+                            <button onClick={() => setDarkMode(!darkMode)} className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-900/20 transition-all border dark:border-slate-700 shadow-inner">
                                 {darkMode ? <Icon name="sun" className="text-yellow-400" /> : <Icon name="moon" className="text-indigo-600" />}
                             </button>
-                            <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-2 rounded-full border border-amber-100 dark:border-amber-900/30 text-[10px] font-black text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                                <Icon name="timer" size={14} />
-                                الموعد: السبت 16 مايو
-                            </div>
                         </div>
                     </header>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        {/* لوحة التحكم */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <section className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-                                <h2 className="text-lg font-bold mb-6 flex items-center gap-2 border-b pb-4 dark:border-slate-800">
-                                    <Icon name="user" className="text-indigo-600" /> مدخلاتك الشخصية
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-right">
+                        <div className="lg:col-span-5 space-y-8">
+                            
+                            {/* Visual Progress */}
+                            <div className="glass rounded-[2.5rem] p-6 flex items-center gap-6 overflow-hidden relative shadow-md">
+                                <div className="chart-container flex items-center justify-center shrink-0">
+                                    <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                                        <path className="text-slate-100 dark:text-slate-800 stroke-current" strokeWidth="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        <path className="text-indigo-600 stroke-current transition-all duration-1000" strokeWidth="3" strokeDasharray={`${(currentTotalEarned / 50) * 100}, 100`} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    </svg>
+                                    <div className="absolute flex flex-col items-center">
+                                        <span className="text-xl font-black text-indigo-600">{currentTotalEarned.toFixed(1)}</span>
+                                        <span className="text-[8px] font-bold text-slate-400 uppercase">من 50</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="font-bold text-sm">درجاتك المجمّعة حالياً</h4>
+                                    <p className="text-[10px] text-slate-400 leading-relaxed">باقي لك <span className="font-black text-indigo-500">50 درجة</span> في الاختبار النهائي. ركز على هدفك!</p>
+                                </div>
+                            </div>
+
+                            <section className="glass rounded-[2.5rem] p-8 space-y-8 shadow-sm">
+                                <h2 className="text-xl font-bold flex items-center gap-2 border-b pb-4 dark:border-slate-800 dark:text-white">
+                                    <Icon name="user" className="text-indigo-600" /> درجاتك الحالية (من 50)
                                 </h2>
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">نسبة الميدترم الحالية (%)</label>
-                                        <div className="relative">
-                                            <input 
-                                                type="number" 
-                                                value={midtermPercent} 
-                                                onChange={(e) => setMidtermPercent(Math.min(100, Math.max(0, e.target.value)))} 
-                                                className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-4 font-bold text-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" 
-                                            />
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold">%</span>
+
+                                {/* Midterm */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                                        <Icon name="file-text" size={16} /> ميد (25 درجة) - 10 أسئلة
+                                    </h3>
+                                    <div className="flex items-center gap-3">
+                                        <div className="input-group">
+                                            <span className="text-[10px] block mb-1 opacity-50 dark:text-slate-400 font-bold tracking-tight">النسبة (%)</span>
+                                            <input type="number" placeholder="0" value={midterm.percent} onChange={(e) => updateMidterm(e.target.value, 'p')} className="w-full bg-transparent font-bold text-lg outline-none dark:text-white" />
+                                        </div>
+                                        <div className="text-xs font-black text-slate-400 dark:text-slate-600 px-1 pt-4 font-bold uppercase">أو</div>
+                                        <div className="input-group">
+                                            <span className="text-[10px] block mb-1 opacity-50 dark:text-slate-400 font-bold tracking-tight">الدرجة (من 25)</span>
+                                            <input type="number" placeholder="0" value={midterm.points} onChange={(e) => updateMidterm(e.target.value, 'pt')} className="w-full bg-transparent font-bold text-lg outline-none dark:text-white" />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">أعمال السنة والواجبات (من 25)</label>
-                                        <input 
-                                            type="number" 
-                                            value={otherGrades} 
-                                            onChange={(e) => setOtherGrades(Math.min(25, Math.max(0, e.target.value)))} 
-                                            className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-4 font-bold text-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" 
-                                        />
-                                    </div>
-                                    <div className="pt-4 border-t dark:border-slate-800">
-                                        <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">حدد رهانك المختار (Target):</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {targetOptions.map(t => (
-                                                <button 
-                                                    key={t} 
-                                                    onClick={() => setSelectedTarget(t)} 
-                                                    className={`py-3 rounded-xl text-sm font-bold transition-all ${selectedTarget === t ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                                                >
-                                                    {t}%
-                                                </button>
-                                            ))}
+                                </div>
+
+                                {/* Quizzes */}
+                                <div className="space-y-8">
+                                    {[1, 2].map(num => (
+                                        <div key={num} className="space-y-4">
+                                            <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                                                <Icon name="help-circle" size={16} /> كويز {num} (7.5 درجة) - 5 أسئلة
+                                            </h3>
+                                            <div className="flex items-center gap-3">
+                                                <div className="input-group">
+                                                    <span className="text-[10px] block mb-1 opacity-50 dark:text-slate-400 font-bold tracking-tight">النسبة (%)</span>
+                                                    <input type="number" placeholder="0" value={num === 1 ? quiz1.percent : quiz2.percent} onChange={(e) => updateQuiz(e.target.value, 'p', num)} className="w-full bg-transparent font-bold text-lg outline-none dark:text-white" />
+                                                </div>
+                                                <div className="text-xs font-black text-slate-400 dark:text-slate-600 px-1 pt-4 font-bold uppercase">أو</div>
+                                                <div className="input-group">
+                                                    <span className="text-[10px] block mb-1 opacity-50 dark:text-slate-400 font-bold tracking-tight">الدرجة (من 7.5)</span>
+                                                    <input type="number" placeholder="0" value={num === 1 ? quiz1.points : quiz2.points} onChange={(e) => updateQuiz(e.target.value, 'pt', num)} className="w-full bg-transparent font-bold text-lg outline-none dark:text-white" />
+                                                </div>
+                                            </div>
                                         </div>
+                                    ))}
+                                </div>
+
+                                {/* Homework */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                                        <Icon name="edit-3" size={16} /> الواجبات ومفاتيح الدراسة (10 درجات)
+                                    </h3>
+                                    <div className="input-group">
+                                        <span className="text-[10px] block mb-1 opacity-50 dark:text-slate-400 font-bold tracking-tight">الدرجة النهائية (من 10)</span>
+                                        <input type="number" placeholder="0" value={homeworkTotal} onChange={(e) => setHomeworkTotal(clamp(e.target.value, 10))} className="w-full bg-transparent font-bold text-lg outline-none dark:text-white" />
                                     </div>
                                 </div>
                             </section>
 
-                            <div className="bg-indigo-900 rounded-[2rem] p-7 text-white shadow-xl space-y-6 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-2xl"></div>
-                                <div className="flex justify-between items-end relative z-10">
-                                    <div>
-                                        <p className="text-xs opacity-60 mb-1">الميدترم سيصبح</p>
-                                        <p className="text-4xl font-black">{(selectedTarget / 100) * TOTAL_MIDTERM_POINTS} <span className="text-xs font-normal opacity-40 text-white/50">من 25</span></p>
+                            {/* Initiative Target Selection */}
+                            <section className="bg-indigo-900 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl"></div>
+                                <h2 className="text-xl font-bold mb-6 flex items-center gap-2 border-b border-white/10 pb-4 relative z-10">
+                                    <Icon name="target" /> النسبة المستهدفة للمبادرة
+                                </h2>
+                                
+                                {isIllogicalTarget && (
+                                    <div className="mb-6 p-4 bg-rose-500/20 border border-rose-500/30 rounded-2xl flex items-center gap-3 relative z-10 animate-pulse">
+                                        <Icon name="alert-triangle" className="text-rose-300" />
+                                        <p className="text-[10px] font-bold text-rose-100 leading-tight">النسبة المستهدفة أقل من درجتك الحالية في الميد! الأفضل اختيار نسبة أعلى للاستفادة.</p>
                                     </div>
-                                    <div className="text-left bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-sm">
-                                        <p className="text-[10px] opacity-60 mb-1">الزيادة الصافية</p>
-                                        <p className="text-xl font-bold text-emerald-400">+{((selectedTarget / 100) * TOTAL_MIDTERM_POINTS - (midtermPercent / 100) * TOTAL_MIDTERM_POINTS).toFixed(2)}</p>
-                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-3 gap-2 relative z-10">
+                                    {targetOptions.slice(0, 6).map(t => (
+                                        <button key={t} onClick={() => setSelectedTarget(t)} className={`py-3 rounded-2xl text-sm font-bold transition-all ${selectedTarget === t ? 'bg-white text-indigo-900 shadow-lg scale-105 border-white' : 'bg-white/10 hover:bg-white/20 border border-white/5'}`}>{t}%</button>
+                                    ))}
                                 </div>
-                                <div className="pt-4 border-t border-white/10 flex items-center gap-4 relative z-10">
-                                    <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center text-indigo-300 shadow-inner">
-                                        <Icon name="book-open" size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] opacity-60 text-right">تحتاج تحل صح في الفاينل</p>
-                                        <p className="text-sm font-bold text-right">{questionsNeeded} سؤال من أصل 20</p>
-                                    </div>
+                                <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/5 text-[10px] leading-relaxed opacity-70 italic relative z-10">
+                                    * في حال تحقيق النسبة المستهدفة في الاختبار النهائي، ستتحول درجة الميدترم إلى <span className="font-bold">{(selectedTarget/100)*25}</span> من 25 درجة.
                                 </div>
-                            </div>
+                            </section>
                         </div>
 
-                        {/* جدول النتائج */}
-                        <div className="lg:col-span-8 space-y-6">
-                            <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                                <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                                    <h3 className="font-bold flex items-center gap-2 dark:text-white">
-                                        <Icon name="trending-up" className="text-indigo-600" /> تحليل سيناريوهات النهائي
-                                    </h3>
-                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold bg-white dark:bg-slate-800 px-3 py-1 rounded-full border dark:border-slate-700">جبر الـ 0.5 مفعّل</span>
+                        <div className="lg:col-span-7 space-y-6">
+                            
+                            {/* Reverse Calculator */}
+                            <div className="glass rounded-[2.5rem] p-6 shadow-sm">
+                                <h3 className="font-bold mb-4 flex items-center gap-2 dark:text-white border-b border-slate-50 dark:border-slate-800 pb-3 font-bold">
+                                    <Icon name="map-pin" className="text-indigo-600" /> الحاسبة العكسية (هدف التقدير)
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    {grades.map(g => (
+                                        <div key={g.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 flex flex-col items-center">
+                                            <div className="text-xs font-black text-indigo-600 mb-1">تقدير {g.id}</div>
+                                            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 text-center leading-tight">{calculateRequirement(g.min)}</div>
+                                        </div>
+                                    ))}
                                 </div>
+                            </div>
+
+                            {/* Main Matrix Table */}
+                            <div className="glass rounded-[2.5rem] overflow-hidden shadow-sm">
+                                <div className="p-6 border-b dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+                                    <h3 className="font-bold flex items-center gap-2 dark:text-white"><Icon name="trending-up" className="text-indigo-600" /> تحليل أداء الفاينل</h3>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => setSavedScenario({ midtermPoints: midterm.points, target: selectedTarget })}
+                                            className="text-[9px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-xl border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-all shadow-sm"
+                                        >
+                                            حفظ للمقارنة
+                                        </button>
+                                        <span className="hidden sm:inline-block text-[10px] text-slate-400 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border dark:border-slate-700 font-bold opacity-60">جبر الـ 0.5 مفعّل</span>
+                                    </div>
+                                </div>
+                                
+                                {savedScenario && (
+                                    <div className="px-6 py-2 bg-amber-50 dark:bg-amber-900/20 text-[9px] font-bold text-amber-700 border-b dark:border-amber-900/30 flex justify-between items-center animate-in fade-in slide-in-from-top-2">
+                                        <div className="flex items-center gap-2">
+                                            <Icon name="layers" size={12} />
+                                            <span>مقارنة جارية مع مستهدف سابق: {savedScenario.target}%</span>
+                                        </div>
+                                        <button onClick={() => setSavedScenario(null)} className="underline decoration-dotted font-black">إلغاء المقارنة</button>
+                                    </div>
+                                )}
+
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-right">
-                                        <thead className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest border-b dark:border-slate-800">
+                                    <table className="w-full text-right text-xs">
+                                        <thead className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b dark:border-slate-800">
                                             <tr>
                                                 <th className="p-5">أداء الفاينل</th>
-                                                <th className="p-5 text-center">المجموع</th>
-                                                <th className="p-5 text-center">القريد</th>
-                                                <th className="p-5 text-center">الميدترم</th>
+                                                <th className="p-5 text-center">المجموع الحالي</th>
+                                                {savedScenario && <th className="p-5 text-center text-amber-600">المجموع السابق</th>}
+                                                <th className="p-5 text-center">التقدير</th>
+                                                <th className="p-5 text-center">تحليل النسبة</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-800">
                                             {finalScenarios.map(actual => {
-                                                const total = calculateTotal(actual);
-                                                const grade = getGradeInfo(total);
-                                                const isMet = actual >= selectedTarget;
+                                                const current = calculateScenario(actual);
+                                                const grade = getGradeLabel(current.total);
+                                                const prev = savedScenario ? calculateScenario(actual, savedScenario.midtermPoints, savedScenario.target) : null;
+                                                const rec = getRecommendation(actual);
+                                                
                                                 return (
-                                                    <tr key={actual} className={`transition-all ${isMet ? 'bg-emerald-50/30 dark:bg-emerald-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                                                    <tr key={actual} className={`transition-all ${current.isMet ? 'bg-emerald-50/20 dark:bg-emerald-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                                                         <td className="p-5">
                                                             <div className="font-black text-lg dark:text-white">{actual}%</div>
-                                                            <div className="text-[10px] text-slate-400">{(actual/100)*TOTAL_FINAL_POINTS} درجة</div>
+                                                            <div className="text-[9px] opacity-40 dark:text-slate-500 font-medium italic">حل {Math.ceil((actual/100)*20)} صح</div>
                                                         </td>
-                                                        <td className="p-5 text-center font-black text-2xl dark:text-white">{total.toFixed(1)}</td>
+                                                        <td className="p-5 text-center font-black text-2xl dark:text-white">{current.total.toFixed(1)}</td>
+                                                        {savedScenario && (
+                                                            <td className="p-5 text-center font-black text-xl text-amber-600/70">{prev.total.toFixed(1)}</td>
+                                                        )}
                                                         <td className="p-5 text-center">
-                                                            <div className={`${grade.color} text-white px-6 py-1.5 rounded-full font-black text-sm shadow-sm`}>{grade.label}</div>
+                                                            <div className={`${grade.color} text-white px-5 py-1.5 rounded-full font-black text-sm shadow-sm inline-block`}>{grade.label}</div>
                                                         </td>
                                                         <td className="p-5 text-center">
-                                                            {isMet ? (
-                                                                <span className="text-emerald-500 text-[10px] font-black flex items-center justify-center gap-1">
-                                                                    <Icon name="check-circle-2" size={12}/> تعدل
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-slate-400 dark:text-slate-600 text-[10px] font-bold">الأصلية</span>
-                                                            )}
+                                                            <div className={`flex items-center justify-center gap-1.5 text-[9px] font-black ${rec.color}`}>
+                                                                <Icon name={rec.icon} size={12} />
+                                                                {rec.text}
+                                                            </div>
+                                                            <div className="text-[7px] opacity-40 mt-1 font-bold">(توصية استرشادية)</div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -252,19 +379,31 @@
                                 </div>
                             </div>
                             
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 shadow-sm">
-                                <div className="h-12 w-12 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 shadow-inner">
-                                    <Icon name="award" size={24} />
+                            {/* CTA Registration Button */}
+                            <div className="bg-indigo-600 rounded-[2.5rem] p-6 text-white text-center shadow-xl shadow-indigo-500/20 space-y-4">
+                                <div className="space-y-1">
+                                    <h4 className="text-lg font-black tracking-tight">هل قررت النسبة المناسبة؟</h4>
+                                    <p className="text-xs text-indigo-100 opacity-80">سجل خيارك الآن عبر الرابط الرسمي للمبادرة</p>
                                 </div>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                    <strong>ملحوظة هامة:</strong> رهان الـ 90% يمنحك أعلى قفزة ممكنة لدرجة الميدترم. في حال لم تحقق الرهان، ستعود لدرجتك الأصلية دون أي خصم؛ المبادرة تدعمك ولا تضرك أبداً.
-                                </p>
+                                <a 
+                                    href="https://forms.cloud.microsoft/pages/responsepage.aspx?id=M_x5vWu0u0-dc80PBpIb3YiicA1kSO5JsBpX1zTE6jdUMlFER0JBVk5MMUtHMkw1QUMzTTFFWUhGNC4u&route=shorturl" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-3 bg-white text-indigo-600 px-10 py-4 rounded-[1.5rem] font-black text-sm hover:bg-indigo-50 transition-all group"
+                                >
+                                    <Icon name="external-link" size={18} className="group-hover:translate-x-[-4px] transition-transform" />
+                                    رابط تسجيل المبادرة الرسمي
+                                </a>
                             </div>
+
                         </div>
                     </div>
-
-                    <footer className="mt-12 text-center text-slate-400 dark:text-slate-600 text-[10px] font-black uppercase tracking-widest border-t dark:border-slate-800 pt-8">
-                        حاسبة الرهان © 2026 | أداة مخصصة لطلاب المالية
+                    
+                    <footer className="mt-12 text-center text-slate-400 dark:text-slate-600 text-[9px] font-black uppercase tracking-[0.4em] py-8 border-t dark:border-slate-800 flex flex-col items-center gap-2">
+                        <div className="flex items-center gap-2 opacity-50">
+                           <Icon name="shield-check" size={14} /> حاسبة مبادرة اختر نسبتك الرسمية
+                        </div>
+                        <p>مبادئ المالية - كلية إدارة الأعمال © 2026</p>
                     </footer>
                 </div>
             );
